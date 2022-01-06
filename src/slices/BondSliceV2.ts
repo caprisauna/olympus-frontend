@@ -120,7 +120,9 @@ export const changeApproval = createAsyncThunk(
       dispatch(error((e as IJsonRPCError).message));
       return;
     } finally {
-      dispatch(getTokenBalance({ provider, networkID, address, value: tokenContractAddress }));
+      if (approveTx) {
+        dispatch(getTokenBalance({ provider, networkID, address, value: tokenContractAddress }));
+      }
     }
   },
 );
@@ -134,7 +136,7 @@ export const purchaseBond = createAsyncThunk(
 
     let depositTx: ethers.ContractTransaction | undefined;
     try {
-      const depositTx = await depositoryContract.deposit(bond.index, amount, maxPrice, address, address);
+      depositTx = await depositoryContract.deposit(bond.index, amount, maxPrice, address, address);
       const text = `Purchase ${bond.displayName} Bond`;
       const pendingTxnType = `bond_${bond.displayName}`;
       if (depositTx) {
@@ -146,8 +148,11 @@ export const purchaseBond = createAsyncThunk(
       dispatch(error((e as IJsonRPCError).message));
       return;
     } finally {
-      dispatch(info("Successfully purchased bond!"));
-      dispatch(getUserNotes({ provider, networkID, address }));
+      if (depositTx) {
+        dispatch(info("Successfully purchased bond!"));
+        dispatch(getUserNotes({ provider, networkID, address }));
+        dispatch(getAllBonds({ address, provider, networkID }));
+      }
     }
   },
 );
@@ -315,7 +320,7 @@ export const claimAllNotes = createAsyncThunk(
     try {
       claimTx = await depositoryContract.redeemAll(address, gOHM);
       const text = `Claim All Bonds`;
-      const pendingTxnType = `claim_all_bonds`;
+      const pendingTxnType = `redeem_all_notes`;
       if (claimTx) {
         dispatch(fetchPendingTxns({ txnHash: claimTx.hash, text, type: pendingTxnType }));
 
@@ -326,8 +331,10 @@ export const claimAllNotes = createAsyncThunk(
       dispatch(error((e as IJsonRPCError).message));
       return;
     } finally {
-      dispatch(getUserNotes({ address, provider, networkID }));
-      dispatch(getBalances({ address, networkID, provider }));
+      if (claimTx) {
+        dispatch(getUserNotes({ address, provider, networkID }));
+        dispatch(getBalances({ address, networkID, provider }));
+      }
     }
   },
 );
@@ -341,10 +348,12 @@ export const claimSingleNote = createAsyncThunk(
     let claimTx: ethers.ContractTransaction | undefined;
     try {
       claimTx = await depositoryContract.redeem(address, indexes, gOHM);
-      const text = `Claim All Bonds`;
-      const pendingTxnType = `claim_all_bonds`;
+      const text = `Redeem Note Index=${indexes}`;
       if (claimTx) {
-        dispatch(fetchPendingTxns({ txnHash: claimTx.hash, text, type: pendingTxnType }));
+        for (let i = 0; i < indexes.length; i++) {
+          const pendingTxnType = `redeem_note_${indexes[i]}`;
+          dispatch(fetchPendingTxns({ txnHash: claimTx.hash, text, type: pendingTxnType }));
+        }
 
         await claimTx.wait();
         dispatch(clearPendingTxn(claimTx.hash));
@@ -353,8 +362,10 @@ export const claimSingleNote = createAsyncThunk(
       dispatch(error((e as IJsonRPCError).message));
       return;
     } finally {
-      dispatch(getUserNotes({ address, provider, networkID }));
-      dispatch(getBalances({ address, networkID, provider }));
+      if (claimTx) {
+        dispatch(getUserNotes({ address, provider, networkID }));
+        dispatch(getBalances({ address, networkID, provider }));
+      }
     }
   },
 );
