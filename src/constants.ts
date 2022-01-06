@@ -4,6 +4,17 @@ import ethereum from "./assets/tokens/wETH.svg";
 import arbitrum from "./assets/arbitrum.png";
 import avalanche from "./assets/tokens/AVAX.svg";
 import polygon from "./assets/tokens/matic.svg";
+import { ReactComponent as DaiImg } from "src/assets/tokens/DAI.svg";
+import { ReactComponent as OhmDaiImg } from "src/assets/tokens/OHM-DAI.svg";
+import { ReactComponent as FraxImg } from "src/assets/tokens/FRAX.svg";
+import { ReactComponent as OhmFraxImg } from "src/assets/tokens/OHM-FRAX.svg";
+import { ReactComponent as OhmLusdImg } from "src/assets/tokens/OHM-LUSD.svg";
+import { ReactComponent as OhmEthImg } from "src/assets/tokens/OHM-WETH.svg";
+import { ReactComponent as wETHImg } from "src/assets/tokens/wETH.svg";
+import { ReactComponent as LusdImg } from "src/assets/tokens/LUSD.svg";
+import { ReactComponent as CvxImg } from "src/assets/tokens/CVX.svg";
+
+import { getTokenPrice } from "./helpers";
 
 export const THE_GRAPH_URL = "https://api.thegraph.com/subgraphs/name/drondin/olympus-protocol-metrics";
 export const EPOCH_INTERVAL = 2200;
@@ -71,6 +82,7 @@ export const addresses: IAddresses = {
     TREASURY_V2: "0x8dd0d811CEFb5CF41528C495E76638B2Ea39d2e6",
     SOHM_V2: "0xebED323CEbe4FfF65F7D7612Ea04313F718E5A75",
     STAKING_V2: "0x06984c3A9EB8e3A8df02A4C09770D5886185792D",
+    BOND_DEPOSITORY: "0x714Ab77DC91D41164A6976c87A6137410959d891",
   },
   [NetworkId.MAINNET]: {
     DAI_ADDRESS: "0x6b175474e89094c44da98b954eedeac495271d0f", // duplicate
@@ -108,6 +120,7 @@ export const addresses: IAddresses = {
     STAKING_V2: "0xB63cac384247597756545b500253ff8E607a8020",
     FIATDAO_WSOHM_ADDRESS: "0xe98ae8cD25CDC06562c29231Db339d17D02Fd486",
     GIVING_ADDRESS: "0x2604170762A1dD22BB4F96C963043Cd4FC358f18",
+    BOND_DEPOSITORY: "",
   },
   [NetworkId.ARBITRUM]: {
     DAI_ADDRESS: "0x6b175474e89094c44da98b954eedeac495271d0f", // duplicate
@@ -353,6 +366,7 @@ interface IViewsForNetwork {
   threeTogether: boolean;
   bonds: boolean;
   network: boolean;
+  bondsV2: boolean;
 }
 
 export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
@@ -364,6 +378,7 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: true,
     bonds: true,
     network: true,
+    bondsV2: true,
   },
   [NetworkId.TESTNET_RINKEBY]: {
     dashboard: true,
@@ -373,6 +388,7 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: true,
     bonds: true,
     network: true,
+    bondsV2: true,
   },
   [NetworkId.ARBITRUM]: {
     dashboard: true,
@@ -382,6 +398,7 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: false,
     bonds: false,
     network: true,
+    bondsV2: false,
   },
   [NetworkId.ARBITRUM_TESTNET]: {
     dashboard: true,
@@ -391,6 +408,7 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: false,
     bonds: false,
     network: true,
+    bondsV2: false,
   },
   [NetworkId.AVALANCHE]: {
     dashboard: true,
@@ -400,6 +418,7 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: false,
     bonds: false,
     network: true,
+    bondsV2: false,
   },
   [NetworkId.AVALANCHE_TESTNET]: {
     dashboard: true,
@@ -409,5 +428,66 @@ export const VIEWS_FOR_NETWORK: { [key: number]: IViewsForNetwork } = {
     threeTogether: false,
     bonds: false,
     network: true,
+    bondsV2: false,
+  },
+};
+
+// VIEWS FOR NETWORK is used to denote which paths should be viewable on each network
+// ... attempting to prevent contract calls that can't complete & prevent user's from getting
+// ... stuck on the wrong view
+export interface V2BondDetails {
+  name: string;
+  bondIconSvg: SVGImageElement;
+  pricingFunction: () => Promise<number>;
+}
+
+const DaiDetails: V2BondDetails = {
+  name: "DAI",
+  bondIconSvg: DaiImg,
+  pricingFunction: async () => {
+    return getTokenPrice("dai");
+  },
+};
+
+const FraxDetails: V2BondDetails = {
+  name: "FRAX",
+  bondIconSvg: FraxImg,
+  pricingFunction: async () => {
+    return 1.0;
+  },
+};
+
+const EthDetails: V2BondDetails = {
+  name: "ETH",
+  bondIconSvg: wETHImg,
+  pricingFunction: async () => {
+    return getTokenPrice("ethereum");
+  },
+};
+
+const CvxDetails: V2BondDetails = {
+  name: "CVX",
+  bondIconSvg: CvxImg,
+  pricingFunction: async () => {
+    return getTokenPrice("convex-finance");
+  },
+};
+
+/**
+ * DOWNCASE ALL THE ADDRESSES!!! for comparison purposes
+ */
+export const v2BondDetails: { [key: number]: { [key: string]: V2BondDetails } } = {
+  [NetworkId.TESTNET_RINKEBY]: {
+    ["0xb2180448f8945c8cc8ae9809e67d6bd27d8b2f2c"]: DaiDetails,
+    ["0x5ed8bd53b0c3fa3deabd345430b1a3a6a4e8bd7c"]: DaiDetails,
+    ["0x2f7249cb599139e560f0c81c269ab9b04799e453"]: FraxDetails,
+    ["0xc778417e063141139fce010982780140aa0cd5ab"]: EthDetails,
+    // ["0xb2180448f8945c8cc8ae9809e67d6bd27d8b2f2c"]: CvxDetails, // we do not have CVX rinkeby in previous bonds
+  },
+  [NetworkId.MAINNET]: {
+    ["0x6b175474e89094c44da98b954eedeac495271d0f"]: DaiDetails,
+    ["0x853d955acef822db058eb8505911ed77f175b99e"]: FraxDetails,
+    ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"]: EthDetails,
+    ["0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"]: CvxDetails,
   },
 };
